@@ -57,7 +57,9 @@ uint32_t clamp_texcoord(float in, uint32_t width)
 qvec4b SampleTexture(
     const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3f &point)
 {
-    if (texture == nullptr || !texture->width) {
+    // A header-only texture (e.g. from a -notex BSP whose WAD wasn't found) has
+    // width/height set but no pixel data; guard against indexing it.
+    if (texture == nullptr || !texture->width || !texture->height || texture->pixels.empty()) {
         return {};
     }
 
@@ -66,5 +68,10 @@ qvec4b SampleTexture(
     const uint32_t x = clamp_texcoord(texcoord[0] * texture->width_scale, texture->width);
     const uint32_t y = clamp_texcoord(texcoord[1] * texture->height_scale, texture->height);
 
-    return texture->pixels[(texture->width * y) + x];
+    const size_t index = (static_cast<size_t>(texture->width) * y) + x;
+    if (index >= texture->pixels.size()) {
+        return {};
+    }
+
+    return texture->pixels[index];
 }

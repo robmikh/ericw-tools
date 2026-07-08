@@ -1120,6 +1120,16 @@ TEST(ltfaceQ1, wadTextureLoading)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {4, 4, 4}, {96, 128, 0}, {0, 0, 1});
 }
 
+// Regression: a "{" fence face whose texture can't be loaded (e.g. -notex BSP with
+// no -wadpath) must not crash the light tool. The unloadable texture is treated as
+// having no mask (no shadow), and lighting completes normally.
+TEST(ltfaceQ1, wadTextureMissingNoCrash)
+{
+    auto [bsp, bspx] = QbspVisLight_Common("q1_grate.map", {"-notex"}, {}, runvis_t::no);
+    // no crash; floor under the (unmasked) panel is fully lit
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, {96, 128, 0}, {0, 0, 1});
+}
+
 TEST(ltfaceQ1, sunlightTwoSuns)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});
