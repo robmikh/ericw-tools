@@ -92,7 +92,7 @@ static constexpr const char *bitflag_names[] = {
     "Q2_UNUSED_12", // bit 35
     "Q2_UNUSED_30", // bit 36
     "Q2_UNUSED_31", // bit 37
-    "INVALID_BIT_38", // bit 38
+    "HL_TRANSLUCENT_CONTENTS", // bit 38
     "INVALID_BIT_39", // bit 39
     "INVALID_BIT_40", // bit 40
     "INVALID_BIT_41", // bit 41
@@ -256,6 +256,7 @@ public:
                 case HL_CONTENTS_CURRENT_270: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_270);
                 case HL_CONTENTS_CURRENT_UP: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_UP);
                 case HL_CONTENTS_CURRENT_DOWN: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_DOWN);
+                case HL_CONTENTS_TRANSLUCENT: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_HL_TRANSLUCENT_CONTENTS);
             }
             // clang-format on
         }
@@ -283,6 +284,8 @@ public:
             return CONTENTS_SLIME;
         } else if (contents.flags & EWT_VISCONTENTS_WATER) {
             if (allows_hl_contents) {
+                if (contents.flags & EWT_CFLAG_HL_TRANSLUCENT_CONTENTS)
+                    return HL_CONTENTS_TRANSLUCENT;
                 if (contents.flags & EWT_CFLAG_CURRENT_0)
                     return HL_CONTENTS_CURRENT_0;
                 if (contents.flags & EWT_CFLAG_CURRENT_90)
@@ -358,6 +361,14 @@ public:
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
+        } else if (allows_hl_contents &&
+                   (texname[0] == '@' || !Q_strcasecmp(texname.data(), "translucent"))) {
+            // GoldSrc translucent liquid: the `TRANSLUCENT` tool texture or any
+            // `@`-prefixed texture. Behaves like water (mirror-inside, no clip)
+            // but is exported as CONTENTS_TRANSLUCENT (-15). The dedicated marker
+            // flag keeps it distinct from ordinary -transwater translucency.
+            return contentflags_t::make(
+                EWT_VISCONTENTS_WATER | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_HL_TRANSLUCENT_CONTENTS);
         } else if ((texname[0] == '*') || (texname[0] == '!' && allows_hl_contents)) {
             // non-Q2: -transwater implies liquids are detail and translucent
             contents_int_t liquid_flags = 0;

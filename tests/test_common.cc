@@ -183,6 +183,48 @@ TEST(common, hlCurrents)
     }
 }
 
+TEST(common, hlTranslucent)
+{
+    auto *game = bspver_hl.game;
+
+    // `@`-prefixed textures and the `TRANSLUCENT` tool texture map to GoldSrc
+    // CONTENTS_TRANSLUCENT (-15): a translucent liquid, distinct from ordinary
+    // water. It carries a dedicated marker flag so it round-trips to -15.
+    for (const char *texname : {"@foo", "TRANSLUCENT", "@WATER"}) {
+        SCOPED_TRACE(texname);
+        auto c = game->face_get_contents(texname, {}, {}, false);
+
+        // translucent water carrying the dedicated export marker
+        EXPECT_TRUE(c.flags & EWT_VISCONTENTS_WATER);
+        EXPECT_TRUE(c.flags & EWT_CFLAG_TRANSLUCENT);
+        EXPECT_TRUE(c.flags & EWT_CFLAG_HL_TRANSLUCENT_CONTENTS);
+
+        // EWT -> HL native
+        EXPECT_EQ(HL_CONTENTS_TRANSLUCENT, game->contents_to_native(c));
+    }
+
+    // HL native -> EWT -> HL native round-trip
+    {
+        auto c = game->create_contents_from_native(HL_CONTENTS_TRANSLUCENT);
+        EXPECT_TRUE(c.flags & EWT_VISCONTENTS_WATER);
+        EXPECT_TRUE(c.flags & EWT_CFLAG_HL_TRANSLUCENT_CONTENTS);
+        EXPECT_EQ(HL_CONTENTS_TRANSLUCENT, game->contents_to_native(c));
+    }
+
+    // REGRESSION: ordinary water must NOT export as -15, even under -transwater
+    // (which sets EWT_CFLAG_TRANSLUCENT on all liquids). Only the dedicated
+    // marker triggers the -15 export.
+    {
+        auto plain = game->face_get_contents("*waterX", {}, {}, false);
+        EXPECT_EQ(CONTENTS_WATER, game->contents_to_native(plain));
+
+        auto transwater = game->face_get_contents("*waterX", {}, {}, true);
+        EXPECT_TRUE(transwater.flags & EWT_CFLAG_TRANSLUCENT);
+        EXPECT_FALSE(transwater.flags & EWT_CFLAG_HL_TRANSLUCENT_CONTENTS);
+        EXPECT_EQ(CONTENTS_WATER, game->contents_to_native(transwater));
+    }
+}
+
 TEST(common, clusterContents)
 {
     for (auto *bspver : bspversions) {

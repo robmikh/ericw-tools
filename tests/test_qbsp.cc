@@ -2611,6 +2611,19 @@ TEST(qbspHL, currents)
     ASSERT_FALSE(cur90_cur0_transition);
 }
 
+TEST(qbspHL, translucent)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_translucent.map", {"-hlbsp"});
+    EXPECT_TRUE(prt);
+
+    // `@`-prefixed brush exports as GoldSrc CONTENTS_TRANSLUCENT (-15)...
+    EXPECT_EQ(HL_CONTENTS_TRANSLUCENT, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {64, 128, 24}));
+
+    // ...while an adjacent ordinary water volume stays CONTENTS_WATER, i.e. the
+    // translucent marker doesn't leak onto normal water (and vice versa).
+    EXPECT_EQ(CONTENTS_WATER, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {192, 128, 24}));
+}
+
 TEST(qbspQ1, wrbrushesAndMiscExternalMap)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});

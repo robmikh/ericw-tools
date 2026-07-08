@@ -684,6 +684,27 @@ If :option:`-hlbsp` is in use, the following exta texture prefixes are recognize
       Different from the vanilla HL compiler, we don't generate faces between different ``CONTENTS_CURRENT_*`` textured
       volumes.
 
+.. texture:: TRANSLUCENT
+             @
+
+   The ``TRANSLUCENT`` tool texture, and any texture whose name begins with
+   ``@``, mark a brush as ``CONTENTS_TRANSLUCENT`` (-15). This is a translucent
+   liquid: during the BSP process it acts like water (mirrored inside, no
+   collision), but is written with its own content value.
+
+   ===================== =====
+   Content type          Value
+   ===================== =====
+   CONTENTS_TRANSLUCENT  -15
+   ===================== =====
+
+   .. note::
+
+      All faces of the brush should use ``TRANSLUCENT`` / an ``@``-prefixed
+      texture, the same as other liquid tool textures. Ordinary water is
+      unaffected: it keeps ``CONTENTS_WATER`` even when :option:`-transwater`
+      makes it translucent for vis.
+
 External Map Prefab Support
 ---------------------------
 

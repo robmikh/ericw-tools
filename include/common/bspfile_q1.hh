@@ -111,6 +111,7 @@ constexpr static int HL_CONTENTS_CURRENT_180 = -11;
 constexpr static int HL_CONTENTS_CURRENT_270 = -12;
 constexpr static int HL_CONTENTS_CURRENT_UP = -13;
 constexpr static int HL_CONTENTS_CURRENT_DOWN = -14;
+constexpr static int HL_CONTENTS_TRANSLUCENT = -15;
 
 constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
 

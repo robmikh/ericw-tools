@@ -1438,6 +1438,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 {
     bool base_contents_set = false;
     contentflags_t base_contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+    contents_int_t translucent_marker = 0;
 
     // validate that all of the sides have valid contents
     for (auto &mapface : mapbrush.faces) {
@@ -1448,6 +1449,14 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 
         if (contents.is_empty()) {
             continue;
+        }
+
+        // a GoldSrc `@`/`TRANSLUCENT` face marks the whole (water-typed) brush as
+        // CONTENTS_TRANSLUCENT, regardless of face order. These share the WATER
+        // visible type with ordinary water, so the mismatch warning below won't
+        // catch it; propagate the marker explicitly instead.
+        if (contents.flags & EWT_CFLAG_HL_TRANSLUCENT_CONTENTS) {
+            translucent_marker = EWT_CFLAG_HL_TRANSLUCENT_CONTENTS | EWT_CFLAG_TRANSLUCENT;
         }
 
         // use the first non-empty as the base contents value
@@ -1461,6 +1470,10 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
                 mapface.line, base_contents.to_string(), contents.to_string());
             break;
         }
+    }
+
+    if (translucent_marker && (base_contents.flags & EWT_VISCONTENTS_WATER)) {
+        base_contents = contentflags_t::make(base_contents.flags | translucent_marker);
     }
 
     // extended flags
@@ -1485,7 +1498,9 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // - set mist, mirrorinside, mirrorinside set
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
         base_contents = contentflags_t::make(
-            (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT)) |
+            (base_contents.flags &
+                ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT |
+                    EWT_CFLAG_HL_TRANSLUCENT_CONTENTS)) |
             EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 

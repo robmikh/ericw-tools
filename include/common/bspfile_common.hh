@@ -124,6 +124,10 @@ enum contents_t : contents_int_t
     EWT_CFLAG_Q2_UNUSED_30 = nth_bit<uint64_t>(36),
     EWT_CFLAG_Q2_UNUSED_31 = nth_bit<uint64_t>(37),
 
+    /** GoldSrc `@`/`TRANSLUCENT` brushes; exported as HL CONTENTS_TRANSLUCENT (-15).
+        Distinct from EWT_CFLAG_TRANSLUCENT, which -transwater sets on ordinary water. */
+    EWT_CFLAG_HL_TRANSLUCENT_CONTENTS = nth_bit<uint64_t>(38),
+
     // masks
     EWT_ALL_LIQUIDS = EWT_VISCONTENTS_LAVA | EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER,
 
