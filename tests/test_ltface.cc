@@ -1055,6 +1055,15 @@ TEST(ltfaceQ1, lightEnvironment)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
 
+// A light_environment and a worldspawn _sunlight are additive: this map is
+// q1_sunlight.map (worldspawn _sunlight) with an equivalent light_environment
+// added, so the floor should be brighter than from either sun alone (49).
+TEST(ltfaceQ1, lightEnvironmentPlusSunlight)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_environment_and_sun.map", {"-lit"});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {99, 99, 99}, {0, 0, 0}, {0, 0, 1}, &lit);
+}
+
 // A GoldSrc/Half-Life light_spot casts a directed cone. This one points straight
 // down (angles pitch -90) with a 30-degree inner cone; the floor directly below is
 // lit while a point outside the cone is dark.
@@ -1065,6 +1074,20 @@ TEST(ltfaceQ1, lightSpot)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 68, 68}, {128, 128, 0}, {0, 0, 1}, &lit);
     // near the wall, well outside the 30-degree cone -> dark
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {30, 128, 0}, {0, 0, 1}, &lit);
+}
+
+// light_spot with distinct inner ("_cone" 10) and outer ("_cone2" 40) cones:
+// full brightness inside the inner cone, a soft transition between, and dark
+// outside the outer cone.
+TEST(ltfaceQ1, lightSpotSoftCone)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_spot_cone2.map", {"-lit"});
+    // directly below (inside the 10-degree inner cone) -> full
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 68, 68}, {128, 128, 0}, {0, 0, 1}, &lit);
+    // ~22 degrees off-axis (between inner 10 and outer 40) -> partially lit
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {45, 45, 45}, {178, 128, 0}, {0, 0, 1}, &lit);
+    // ~42 degrees off-axis (outside the 40-degree outer cone) -> dark
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {238, 128, 0}, {0, 0, 1}, &lit);
 }
 
 TEST(ltfaceQ1, sunlightTwoSuns)

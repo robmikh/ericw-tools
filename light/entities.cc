@@ -1068,16 +1068,25 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                     entity->sun.set_value(true, settings::source::MAP);
                 } else if (is_light_spot) {
                     // Directed cone. Direction comes from a target if present (handled in
-                    // SetupSpotlights()), otherwise from angles/pitch. "_cone" maps to the
-                    // "cone" setting automatically; "_cone2" (outer cone) needs doubling to
-                    // match the "softangle" convention used by SetupSpotlights().
+                    // SetupSpotlights()), otherwise from angles/pitch.
                     if (!entity->mangle.is_changed() && entity->epairs->get("target").empty()) {
                         entity->mangle.set_value(
                             mangle_from_hl_angles_pitch(*entity->epairs), settings::source::MAP);
                     }
-                    if (entity->epairs->find("_cone2") != entity->epairs->end()) {
-                        entity->spotangle2.set_value(
-                            2.0f * entity->epairs->get_float("_cone2"), settings::source::MAP);
+                    // Cone: HL "_cone" is the inner (full-brightness) half-angle and
+                    // "_cone2" is the outer (fade-to-zero) half-angle. In EWT, `cone` is
+                    // the OUTER cone (spotfalloff) and `spotangle2` is the INNER cone
+                    // (spotfalloff2, halved in the falloff calc). "_cone" auto-maps to
+                    // `cone` via set_settings(), so override to get the roles right.
+                    const bool has_cone = entity->epairs->find("_cone") != entity->epairs->end();
+                    const bool has_cone2 = entity->epairs->find("_cone2") != entity->epairs->end();
+                    if (has_cone || has_cone2) {
+                        const float inner =
+                            has_cone ? entity->epairs->get_float("_cone") : entity->epairs->get_float("_cone2");
+                        const float outer =
+                            has_cone2 ? entity->epairs->get_float("_cone2") : entity->epairs->get_float("_cone");
+                        entity->cone.set_value(outer, settings::source::MAP); // outer cone
+                        entity->spotangle2.set_value(2.0f * inner, settings::source::MAP); // inner cone
                     }
                 }
             }
