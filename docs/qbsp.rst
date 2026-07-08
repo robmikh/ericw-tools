@@ -329,6 +329,12 @@ Options
 
    Note that the textures still need to be available to qbsp.
 
+   In :option:`-hlbsp` mode this is the **default** behaviour: Half-Life maps
+   reference textures from external WAD files (``halflife.wad`` etc.) that
+   players already have, so embedding them into the BSP is wasteful. Pass
+   ``-notex 0`` to force textures to be embedded anyway (e.g. when using custom
+   WADs).
+
    Technical details: ``LUMP_TEXTURES`` is still written, but each texture
    within is the ``dmiptex_t`` header only (with no texture data following),
    with ``offsets`` all set to 0.

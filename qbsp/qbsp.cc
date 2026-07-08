@@ -732,6 +732,16 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
     // update target game
     qbsp_options.target_game = qbsp_options.target_version->game;
 
+    // GoldSrc/HLBSP maps reference textures from external WADs (halflife.wad,
+    // etc.) that players always have, so default to reference-only textures like
+    // the original HL compilers. Users can still embed with an explicit
+    // "-notex 0". Guarded by is_changed() so an explicit setting always wins.
+    if (qbsp_options.target_game->id == GAME_HALF_LIFE) {
+        if (!notextures.is_changed()) {
+            notextures.set_value(true, settings::source::GAME_TARGET);
+        }
+    }
+
     /* If no wadpath given, default to the map directory */
     if (wadpaths.pathsValue().empty()) {
         wadpath wp{qbsp_options.map_path.parent_path(), false};

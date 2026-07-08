@@ -2543,6 +2543,43 @@ TEST(qbspHL, basic)
     EXPECT_EQ(64, bsp.dtex.textures[1].height);
 }
 
+TEST(qbspHL, notexDefault)
+{
+    // HLBSP maps reference textures from external WADs (halflife.wad, etc.),
+    // so -notex (reference-only textures) should be the DEFAULT in HLBSP mode.
+    {
+        // no -notex flag: HLBSP should still default to reference-only.
+        const auto [bsp, bspx, prt] = LoadTestmap("hl_basic.map", {"-hlbsp"});
+
+        ASSERT_EQ(2, bsp.dtex.textures.size());
+
+        auto &hltest = bsp.dtex.textures[1];
+        EXPECT_EQ("hltest", hltest.name);
+        EXPECT_FALSE(hltest.null_texture);
+        EXPECT_EQ(64, hltest.width);
+        EXPECT_EQ(64, hltest.height);
+        // reference-only: header only, no embedded pixel data, offsets zeroed.
+        EXPECT_EQ(hltest.data.size(), sizeof(dmiptex_t));
+        for (int i = 0; i < 4; ++i)
+            EXPECT_EQ(hltest.offsets[i], 0);
+    }
+
+    {
+        // explicit opt-out (-notex 0) must still embed pixel data.
+        const auto [bsp, bspx, prt] = LoadTestmap("hl_basic.map", {"-hlbsp", "-notex", "0"});
+
+        ASSERT_EQ(2, bsp.dtex.textures.size());
+
+        auto &hltest = bsp.dtex.textures[1];
+        EXPECT_EQ("hltest", hltest.name);
+        EXPECT_FALSE(hltest.null_texture);
+        EXPECT_EQ(64, hltest.width);
+        EXPECT_EQ(64, hltest.height);
+        // embedded: full miptex (header + pixels) is larger than a bare header.
+        EXPECT_GT(hltest.data.size(), sizeof(dmiptex_t));
+    }
+}
+
 TEST(qbspHL, liquids)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("hl_liquids.map", {"-hlbsp", "-notex"});
