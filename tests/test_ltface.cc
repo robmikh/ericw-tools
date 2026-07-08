@@ -1090,6 +1090,21 @@ TEST(ltfaceQ1, lightSpotSoftCone)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {238, 128, 0}, {0, 0, 1}, &lit);
 }
 
+// GoldSrc entities express translucency via "rendermode" + "renderamt" instead of
+// "alpha". A rendermode 5 (additive) / renderamt 128 shadow-casting bmodel should
+// cast the same partial shadow as an equivalent "alpha" "0.5" bmodel. (rendermode
+// and renderamt are GoldSrc-only keys, so this is handled for any target.)
+TEST(ltfaceQ1, renderamtAlpha)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_renderamt.map", {"-lit"});
+    // full sun where there is no panel (reference)
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, {192, 80, 0}, {0, 0, 1}, &lit);
+    // under the GoldSrc rendermode 5 / renderamt 128 panel -> partial shadow
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {67, 67, 67}, {96, 80, 0}, {0, 0, 1}, &lit);
+    // under an equivalent "alpha" "0.5" panel -> must match the renderamt panel
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {67, 67, 67}, {288, 80, 0}, {0, 0, 1}, &lit);
+}
+
 TEST(ltfaceQ1, sunlightTwoSuns)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});

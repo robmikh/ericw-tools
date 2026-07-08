@@ -749,6 +749,20 @@ static void FindModelInfo(const mbsp_t *bsp)
         // apply settings
         info->set_settings(*entdict, settings::source::MAP);
 
+        // GoldSrc entities express translucency with "rendermode" + "renderamt"
+        // (0-255) instead of "alpha". When rendermode is Color(1)/Texture(2)/
+        // Glow(3)/Additive(5) and no explicit "alpha" was given, convert renderamt
+        // to a normalized alpha so translucent bmodels cast the right partial
+        // shadow. rendermode 0 (Normal) and 4 (Solid) are opaque here. These keys
+        // are GoldSrc-only, so this is safe to apply regardless of target game.
+        if (!info->alpha.is_changed() && entdict->has("rendermode")) {
+            const int rendermode = entdict->get_int("rendermode");
+            if (rendermode == 1 || rendermode == 2 || rendermode == 3 || rendermode == 5) {
+                const double renderamt = entdict->has("renderamt") ? entdict->get_float("renderamt") : 0.0;
+                info->alpha.set_value(std::clamp(renderamt / 255.0, 0.0, 1.0), settings::source::MAP);
+            }
+        }
+
         // vanilla-compatible switchable shadows
         if (auto *light = LightWithSwitchableShadowTargetValue(entdict->get("targetname"))) {
             // take the "style" key from this light entity and enable switchable shadows on ourself

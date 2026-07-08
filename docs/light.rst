@@ -743,6 +743,17 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
 
       Document default, and which conditions cause a face to be "stained glass"
 
+.. bmodel-key:: "rendermode" "n"
+                "renderamt" "n"
+
+   GoldSrc/Half-Life brush entities express translucency with these keys instead
+   of ``alpha``. When ``rendermode`` is 1 (Color), 2 (Texture), 3 (Glow) or 5
+   (Additive), the ``renderamt`` value (0-255) is converted to a normalized alpha
+   (``renderamt`` / 255) and used like the ``alpha`` key, so a translucent
+   shadow-casting bmodel casts the correct partial shadow. ``rendermode`` 0
+   (Normal) and 4 (Solid) are treated as opaque. An explicit ``alpha`` key takes
+   precedence.
+
 .. bmodel-key:: "_litwater" "n"
                 "_splitturb" "n"
 
