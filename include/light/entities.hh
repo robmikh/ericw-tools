@@ -138,6 +138,14 @@ public:
  *    Stores the RGB values to determine the light color
  */
 
+/**
+ * Converts a GoldSrc/Half-Life "angles" ("pitch yaw roll") key, plus an optional
+ * "pitch" override key, into an EWT mangle (yaw, pitch, roll) suitable for
+ * qv::vec_from_mangle(). Follows the HL convention where pitch -90 points straight
+ * down (-Z) and pitch +90 points up; the value is passed through without negation.
+ */
+qvec3f mangle_from_hl_angles_pitch(const entdict_t &epairs);
+
 void ResetLightEntities();
 std::string TargetnameForLightStyle(int style);
 std::vector<std::unique_ptr<light_t>> &GetLights();

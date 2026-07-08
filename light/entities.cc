@@ -158,6 +158,23 @@ void light_t::expandAABB(const qvec3f &pt)
     bounds += pt;
 }
 
+qvec3f mangle_from_hl_angles_pitch(const entdict_t &epairs)
+{
+    // GoldSrc "angles" is "pitch yaw roll".
+    qvec3f angles{};
+    epairs.get_vector("angles", angles);
+
+    // A separate "pitch" key, if present, overrides the pitch in "angles".
+    if (epairs.find("pitch") != epairs.end()) {
+        angles[0] = epairs.get_float("pitch");
+    }
+
+    // EWT mangle is (yaw, pitch, roll) fed to qv::vec_from_mangle(), where pitch
+    // -90 already points straight down (-Z). HL uses the same sign (pitch -90 =
+    // down), so pass the pitch through unchanged (no negation).
+    return qvec3f(angles[1], angles[0], angles[2]);
+}
+
 /*
  * ============================================================================
  * ENTITY FILE PARSING
@@ -1030,7 +1047,44 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             // populate settings
             entity->set_settings(*entity->epairs, settings::source::MAP);
 
-            if (entity->mangle.is_changed()) {
+            // GoldSrc/Half-Life special light classnames. Recognized by classname
+            // (like Q3Map2's "lightJunior") so we don't disturb Q1/Q2 lights that
+            // use "angles" for a model. Everything else starting with "light" keeps
+            // its normal Quake-style point-light behaviour.
+            {
+                const std::string &light_classname = entity->epairs->get("classname");
+                const bool is_light_environment = string_iequals(light_classname, "light_environment");
+                const bool is_light_spot = string_iequals(light_classname, "light_spot");
+                // "_sky" "1" on a light_spot makes it behave like a light_environment.
+                const bool spot_is_sky = is_light_spot && entity->epairs->get_int("_sky") == 1;
+
+                if (is_light_environment || spot_is_sky) {
+                    // Parallel sky/sun lighting. Direction from angles/pitch; SetupSuns()
+                    // turns a "sun" light into a real sun and zeroes its point contribution.
+                    if (!entity->mangle.is_changed()) {
+                        entity->mangle.set_value(
+                            mangle_from_hl_angles_pitch(*entity->epairs), settings::source::MAP);
+                    }
+                    entity->sun.set_value(true, settings::source::MAP);
+                } else if (is_light_spot) {
+                    // Directed cone. Direction comes from a target if present (handled in
+                    // SetupSpotlights()), otherwise from angles/pitch. "_cone" maps to the
+                    // "cone" setting automatically; "_cone2" (outer cone) needs doubling to
+                    // match the "softangle" convention used by SetupSpotlights().
+                    if (!entity->mangle.is_changed() && entity->epairs->get("target").empty()) {
+                        entity->mangle.set_value(
+                            mangle_from_hl_angles_pitch(*entity->epairs), settings::source::MAP);
+                    }
+                    if (entity->epairs->find("_cone2") != entity->epairs->end()) {
+                        entity->spotangle2.set_value(
+                            2.0f * entity->epairs->get_float("_cone2"), settings::source::MAP);
+                    }
+                }
+            }
+
+            // A sun (light_environment / Arghrad "_sun") uses "mangle" for its direction,
+            // not as a spotlight; don't convert it into a spotlight here.
+            if (entity->mangle.is_changed() && !entity->sun.value()) {
                 entity->spotvec = qv::vec_from_mangle(entity->mangle.value());
                 entity->spotlight = true;
 

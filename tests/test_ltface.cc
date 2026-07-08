@@ -1046,6 +1046,27 @@ TEST(ltfaceQ1, sunlight)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
 
+// A GoldSrc/Half-Life light_environment should light like a sun. This map is
+// q1_sunlight.map with the worldspawn `_sunlight`/`_sun_mangle` replaced by an
+// equivalent light_environment entity; the floor should receive the same light.
+TEST(ltfaceQ1, lightEnvironment)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_environment.map", {"-lit"});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
+}
+
+// A GoldSrc/Half-Life light_spot casts a directed cone. This one points straight
+// down (angles pitch -90) with a 30-degree inner cone; the floor directly below is
+// lit while a point outside the cone is dark.
+TEST(ltfaceQ1, lightSpot)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_spot.map", {"-lit"});
+    // directly under the spotlight, inside the cone -> lit
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 68, 68}, {128, 128, 0}, {0, 0, 1}, &lit);
+    // near the wall, well outside the 30-degree cone -> dark
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {30, 128, 0}, {0, 0, 1}, &lit);
+}
+
 TEST(ltfaceQ1, sunlightTwoSuns)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});

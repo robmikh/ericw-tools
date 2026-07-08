@@ -985,6 +985,39 @@ Supports all keys from `Point Lights`_ in addition to the following:
    full brightness of the inner cone to the edge of the outer cone.
    Default 0 (disabled).
 
+Half-Life Lighting Entities
+---------------------------
+
+For compatibility with maps authored for the original GoldSrc/Half-Life
+compilers, two special light classnames are recognized (any other ``light*``
+entity behaves as a normal point light, as in Quake):
+
+.. classname:: light_environment
+
+   Emits parallel "sun" light, like a sunlight. The direction is taken from the
+   GoldSrc ``"angles"`` ("pitch yaw roll") key, with an optional ``"pitch"`` key
+   overriding the pitch (a negative pitch, e.g. ``-90``, points downward).
+   Brightness/colour come from the ``"_light"`` key ("r g b intensity").
+
+   .. note::
+
+      Only the world lightmap contribution is produced. The GoldSrc runtime
+      behaviour of overriding model (MDL) lighting from the sky is an engine
+      feature and is not part of the compiled BSP.
+
+   .. note::
+
+      A ``light_environment`` and a worldspawn :worldspawn-key:`_sunlight` are
+      additive (you get both suns).
+
+.. classname:: light_spot
+
+   A spotlight. The cone direction comes from a ``"target"`` if present,
+   otherwise from ``"angles"``/``"pitch"`` (same convention as
+   ``light_environment``). The inner cone is set with ``"_cone"`` and the outer
+   (soft) cone with ``"_cone2"``. Setting ``"_sky" "1"`` makes it behave like a
+   ``light_environment`` instead.
+
 Surface Lights
 --------------
 

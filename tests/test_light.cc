@@ -454,6 +454,31 @@ TEST(mathlib, vecFromMangle)
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, -1), qv::vec_from_mangle(qvec3f(0, -90, 0)), MANGLE_EPSILON));
 }
 
+// Pins the GoldSrc/Half-Life light_environment / light_spot direction convention:
+// "angles" is "pitch yaw roll", an optional "pitch" key overrides the pitch, and
+// pitch -90 must point straight down (-Z).
+TEST(mathlib, mangleFromHLAnglesPitch)
+{
+    // direction the light travels, as a unit vector
+    auto dir = [](const entdict_t &d) { return qv::vec_from_mangle(mangle_from_hl_angles_pitch(d)); };
+
+    // yaw 0 / pitch 0 -> east (+X)
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), dir(entdict_t{{"angles", "0 0 0"}}), MANGLE_EPSILON));
+
+    // pitch -90 (in "angles") -> straight down (-Z)
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, -1), dir(entdict_t{{"angles", "-90 0 0"}}), MANGLE_EPSILON));
+
+    // pitch +90 -> straight up (+Z)
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 1), dir(entdict_t{{"angles", "90 0 0"}}), MANGLE_EPSILON));
+
+    // yaw 90 -> north (+Y)
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 1, 0), dir(entdict_t{{"angles", "0 90 0"}}), MANGLE_EPSILON));
+
+    // separate "pitch" key overrides the pitch component of "angles"
+    EXPECT_TRUE(qv::epsilonEqual(
+        qvec3f(0, 0, -1), dir(entdict_t{{"angles", "45 0 0"}, {"pitch", "-90"}}), MANGLE_EPSILON));
+}
+
 TEST(mathlib, mangleFromVec)
 {
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 0), qv::mangle_from_vec(qvec3f(1, 0, 0)), MANGLE_EPSILON));
