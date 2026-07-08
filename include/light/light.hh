@@ -397,6 +397,7 @@ public:
     setting_scalar gate;
     setting_int32 sunsamples;
     setting_bool arghradcompat;
+    setting_set wadpaths;
     setting_bool nolighting;
     setting_vec3 debugface;
     setting_vec3 debugvert;

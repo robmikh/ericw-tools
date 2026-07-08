@@ -1105,6 +1105,21 @@ TEST(ltfaceQ1, renderamtAlpha)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {67, 67, 67}, {288, 80, 0}, {0, 0, 1}, &lit);
 }
 
+// The light tool must load textures from the WADs referenced by the worldspawn
+// "wad" key (resolved via -wadpath) so texture-dependent lighting works even when
+// textures aren't embedded in the BSP (e.g. with -notex). Here textures are not
+// embedded (-notex), so the "{" fence panel can only cast its shadow if the light
+// tool loads "{grate" from the WAD.
+TEST(ltfaceQ1, wadTextureLoading)
+{
+    auto [bsp, bspx] = QbspVisLight_Common(
+        "q1_grate.map", {"-notex"}, {"-wadpath", fs::path(testmaps_dir).string()}, runvis_t::no);
+    // reference: full sun where there is no panel
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, {224, 128, 0}, {0, 0, 1});
+    // under the "{grate" panel: shadowed (only possible once the WAD texture loaded)
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {4, 4, 4}, {96, 128, 0}, {0, 0, 1});
+}
+
 TEST(ltfaceQ1, sunlightTwoSuns)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});

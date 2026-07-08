@@ -87,6 +87,15 @@ Game
 
    Additional paths or archives to add to the search path, mostly for loose files.
 
+.. option:: -wadpath "/path/to/folder" <multiple allowed>
+
+   Directories to search for the WAD files referenced by the map's worldspawn
+   ``wad`` key. The light tool needs these to load textures for texture-dependent
+   lighting (masked ``{`` fence shadows, colored liquid shadows, surface-light
+   texture colors) when the textures are not embedded in the BSP, e.g. when qbsp
+   was run with :option:`qbsp -notex` (which is the default in ``-hlbsp`` mode).
+   WADs are also searched relative to the BSP's own directory.
+
 .. option:: -q2rtx
 
    Adjust settings to best support Q2RTX.

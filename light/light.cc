@@ -37,6 +37,8 @@
 #include <common/numeric_cast.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
+#include <common/entdata.h>
+#include <sstream>
 #include <common/parallel.hh>
 #include <common/ostream.hh>
 
@@ -293,6 +295,9 @@ light_settings::light_settings()
       gate{this, "gate", LIGHT_EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
       sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
       arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
+      wadpaths{this, {"wadpath", "xwadpath"}, "\"dir\" <multiple allowed>", &output_group,
+          "add a directory to search for the WADs referenced by the worldspawn \"wad\" key (needed to load "
+          "texture-dependent lighting like masked \"{\" shadows when textures aren't embedded, e.g. with -notex)"},
       nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},
       debugface{this, "debugface", std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(),
           std::numeric_limits<float>::quiet_NaN(), &debug_group, ""},
@@ -787,6 +792,65 @@ static void FindModelInfo(const mbsp_t *bsp)
     }
 
     Q_assert(modelinfo.size() == bsp->dmodels.size());
+}
+
+// Half-Life/Quake maps reference textures from external WADs via the worldspawn
+// "wad" key. qbsp only embeds those textures when -notex is off, so make the WADs
+// available to the light tool here. This lets texture-dependent lighting (masked
+// "{" fence shadows, colored liquid shadows, surface-light texture colors) work
+// even when the textures aren't embedded in the BSP.
+static void LoadWadPath(const fs::path &wadname, const fs::path &source_dir)
+{
+    auto try_add = [](const fs::path &p) { return fs::exists(p) && fs::addArchive(p, false) != nullptr; };
+
+    if (wadname.is_absolute()) {
+        try_add(wadname);
+        return;
+    }
+    // search the -wadpath directories first
+    for (const std::string &wadpath : light_options.wadpaths.values()) {
+        if (try_add(fs::path(wadpath) / wadname)) {
+            return;
+        }
+    }
+    // then relative to the BSP/source directory
+    if (!source_dir.empty() && try_add(source_dir / wadname)) {
+        return;
+    }
+    // finally relative to the current directory
+    try_add(wadname);
+}
+
+static void LoadWads(const mbsp_t &bsp, const fs::path &source)
+{
+    // Q2 loads textures differently (WAL files via -path), so this is Q1/HL only.
+    if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        return;
+    }
+
+    std::string wadstring;
+    for (const entdict_t &entdict : EntData_Parse(bsp)) {
+        if (string_iequals(entdict.get("classname"), "worldspawn")) {
+            wadstring = entdict.get("_wad");
+            if (wadstring.empty()) {
+                wadstring = entdict.get("wad");
+            }
+            break;
+        }
+    }
+
+    if (wadstring.empty()) {
+        return;
+    }
+
+    const fs::path source_dir = source.parent_path();
+    std::istringstream stream(wadstring);
+    std::string wad;
+    while (std::getline(stream, wad, ';')) {
+        if (!wad.empty()) {
+            LoadWadPath(fs::path(wad), source_dir);
+        }
+    }
 }
 
 /*
@@ -1333,6 +1397,10 @@ int light_main(int argc, const char **argv)
             light_options.visapprox.set_value(visapprox_t::RAYS, settings::source::DEFAULT);
         }
     }
+
+    // make WADs referenced by the worldspawn "wad" key available so texture-
+    // dependent lighting works even when textures aren't embedded (e.g. -notex).
+    LoadWads(bsp, source);
 
     img::load_textures(&bsp, light_options);
 
