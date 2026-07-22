@@ -1327,6 +1327,24 @@ TEST(ltfaceHL, lightBlack)
     }
 }
 
+// A named (switchable) light in HL gets a switchable lightstyle (>=32). GoldSrc
+// expects the base lightstyle 0 to occupy slot 0 so it can toggle the switchable
+// style; otherwise (as when the room has no other/base light) the switchable style
+// lands in slot 0 with no base and the light is stuck on. Regression for that.
+TEST(ltfaceHL, switchableLightStyleZeroFirst)
+{
+    auto [bsp, bspx] = QbspVisLight_HL("hl_switchable_light.map", {});
+
+    // floor directly under the named light
+    const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {128, 128, 0}, {0, 0, 1});
+    ASSERT_TRUE(face);
+
+    // style 0 (base) must lead, with the switchable style 32 following.
+    EXPECT_EQ(face->styles[0], 0);
+    EXPECT_EQ(face->styles[1], 32);
+    EXPECT_NE(face->lightofs, -1);
+}
+
 TEST(ltfaceQ1, litNotGenerated)
 {
     SCOPED_TRACE("map with no colored lights doesn't generate a .lit");

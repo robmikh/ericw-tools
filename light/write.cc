@@ -25,6 +25,8 @@
 #include <common/parallel.hh>
 #include <common/litfile.hh>
 
+#include <algorithm>
+
 void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version,
     const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase,
     const std::vector<uint8_t> &hdr_filebase)
@@ -721,6 +723,17 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
 {
     lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
 
+    // GoldSrc/Half-Life expects lightstyle 0 (the always-on base) in the first
+    // lightmap slot; otherwise a switchable style (>=32) can land in slot 0 with
+    // no base, leaving switchable lights stuck on and non-toggleable. Pre-create a
+    // style-0 lightmap now, BEFORE we collect any lightmap_t pointers below, so the
+    // reorder step at the end can reference it without an emplace_back reallocating
+    // `lightmaps` (which would invalidate the pointers we've stored).
+    const bool hl_force_style0 = bsp->loadversion->game->id == GAME_HALF_LIFE;
+    if (hl_force_style0) {
+        Lightmap_ForStyle(&lightmaps, 0, lightsurf)->style = 0;
+    }
+
     size_t game_styles = bsp->loadversion->game->max_lightmaps();
 
     size_t maxfstyles = std::min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : game_styles);
@@ -807,6 +820,32 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
         }
 
         id.sorted.push_back(pair.second);
+    }
+
+    // GoldSrc/Half-Life: ensure lightstyle 0 leads (see the pre-create note above).
+    // Match HLRAD so the engine has a base lightstyle in slot 0 and can toggle the
+    // switchable styles (>=32) that follow.
+    if (hl_force_style0 && !id.sorted.empty()) {
+        auto style0_it =
+            std::find_if(id.sorted.begin(), id.sorted.end(), [](const lightmap_t *lm) { return lm->style == 0; });
+
+        if (style0_it != id.sorted.end()) {
+            // move the existing style-0 lightmap to the front, keeping the rest in order
+            std::rotate(id.sorted.begin(), style0_it, style0_it + 1);
+        } else {
+            // style-0 base was filtered out as all-black; add it back in slot 0.
+            // (pre-created above, so this lookup won't reallocate `lightmaps`.)
+            lightmap_t *lm0 = Lightmap_ForStyle(&lightmaps, 0, lightsurf);
+            for (auto &sample : lightsurf->samples) {
+                sample.occluded = false;
+            }
+            id.sorted.insert(id.sorted.begin(), lm0);
+
+            // respect the per-face style limit (drop the least-bright trailing style)
+            if (id.sorted.size() > maxfstyles) {
+                id.sorted.resize(maxfstyles);
+            }
+        }
     }
 
     /* final number of lightmaps */
