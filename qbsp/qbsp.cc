@@ -1423,6 +1423,17 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
                 case CONTENTS_EMPTY: // really an error, but whatever
                 case CONTENTS_SOLID: // these are okay
                 case CONTENTS_WATER:
+                // The GoldSrc water variants are all water-typed brushes, so they belong with the
+                // liquids here. Without these cases they reach the default branch below and are
+                // written out as CONTENTS_SOLID, turning swimmable water into a wall for anything
+                // colliding against the brush list.
+                case HL_CONTENTS_CURRENT_0:
+                case HL_CONTENTS_CURRENT_90:
+                case HL_CONTENTS_CURRENT_180:
+                case HL_CONTENTS_CURRENT_270:
+                case HL_CONTENTS_CURRENT_UP:
+                case HL_CONTENTS_CURRENT_DOWN:
+                case HL_CONTENTS_TRANSLUCENT:
                 case CONTENTS_SLIME:
                 case CONTENTS_LAVA:
                 case CONTENTS_SKY:

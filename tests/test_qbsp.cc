@@ -2624,6 +2624,48 @@ TEST(qbspHL, translucent)
     EXPECT_EQ(CONTENTS_WATER, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {192, 128, 24}));
 }
 
+/// Number of worldspawn brushes in the BRUSHLIST lump carrying the given contents value.
+static int CountWorldBrushesWithContents(const bspxbrushes &lump, int contents)
+{
+    int count = 0;
+
+    for (const auto &model : lump.models) {
+        if (model.modelnum != 0)
+            continue;
+        for (const auto &brush : model.brushes) {
+            if (brush.contents == contents)
+                count += 1;
+        }
+    }
+
+    return count;
+}
+
+// A GoldSrc contents value that BSPX_Brushes_AddModel doesn't recognize falls through to solid, so
+// an engine colliding against the brush list rather than the clip hulls would find a wall where the
+// map has swimmable water. Every water-typed variant has to survive into the lump as itself.
+
+TEST(qbspHL, translucentWrbrushes)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_translucent.map", {"-hlbsp", "-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+
+    EXPECT_EQ(1, CountWorldBrushesWithContents(lump, HL_CONTENTS_TRANSLUCENT));
+    EXPECT_EQ(1, CountWorldBrushesWithContents(lump, CONTENTS_WATER));
+}
+
+TEST(qbspHL, currentsWrbrushes)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_currents.map", {"-hlbsp", "-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+
+    // The two currents qbspHL.currents pins down by contents-at-point.
+    EXPECT_GE(CountWorldBrushesWithContents(lump, HL_CONTENTS_CURRENT_90), 1);
+    EXPECT_GE(CountWorldBrushesWithContents(lump, HL_CONTENTS_CURRENT_0), 1);
+}
+
 TEST(qbspQ1, wrbrushesAndMiscExternalMap)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});
